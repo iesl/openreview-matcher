@@ -5,6 +5,7 @@ TODO: could error handling be cleaner?
 """
 import flask
 import openreview
+import redis
 from flask_cors import CORS
 
 from .openreview_interface import ConfigNoteInterface
@@ -51,36 +52,45 @@ def match():
             token=token, baseurl=flask.current_app.config["OPENREVIEW_BASEURL"]
         )
 
+        from matcher.service.server import redis_pool
+
+        redis_conn = redis.Redis(connection_pool=redis_pool)
+
         interface = ConfigNoteInterface(
             client=openreview_client,
             config_note_id=config_note_id,
             logger=flask.current_app.logger,
         )
 
-        interface.validate_group(interface.match_group)
         openreview_client.impersonate(interface.venue_id)
 
-        if interface.config_note.content["status"] == "Running":
+        config_note_status = redis_conn.hget(
+            name="config_notes", key=config_note_id
+        )
+        if not config_note_status:
+            config_note_status = interface.config_note.content["status"]
+
+        if config_note_status == "Running":
             raise MatcherStatusException("Matcher is already running")
-        if interface.config_note.content["status"] == "Complete":
+        if config_note_status == "Complete":
             raise MatcherStatusException(
                 "Match configured by {} is already complete".format(
                     config_note_id
                 )
             )
-        if interface.config_note.content["status"] == "Deploying":
+        if config_note_status == "Deploying":
             raise MatcherStatusException(
                 "Match configured by {} is being deployed".format(
                     config_note_id
                 )
             )
-        if interface.config_note.content["status"] == "Deployed":
+        if config_note_status == "Deployed":
             raise MatcherStatusException(
                 "Match configured by {} is already deployed".format(
                     config_note_id
                 )
             )
-        if interface.config_note.content["status"] == "Queued":
+        if config_note_status == "Queued":
             raise MatcherStatusException(
                 "Match configured by {} is already in queue.".format(
                     config_note_id
@@ -178,13 +188,30 @@ def deploy():
             token=token, baseurl=flask.current_app.config["OPENREVIEW_BASEURL"]
         )
 
+        from matcher.service.server import redis_pool
+
+        redis_conn = redis.Redis(connection_pool=redis_pool)
+
         interface = ConfigNoteInterface(
             client=openreview_client,
             config_note_id=config_note_id,
             logger=flask.current_app.logger,
         )
 
-        if interface.config_note.content["status"] not in [
+        config_note_status = redis_conn.hget(
+            name="config_notes", key=config_note_id
+        )
+        if not config_note_status:
+            config_note_status = interface.config_note.content["status"]
+
+        if config_note_status == "Deploying":
+            raise MatcherStatusException(
+                "Match configured by {} is being deployed".format(
+                    config_note_id
+                )
+            )
+
+        if config_note_status not in [
             "Complete",
             "Deployment Error",
         ]:

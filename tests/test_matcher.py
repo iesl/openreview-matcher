@@ -4,6 +4,8 @@ Verifies that custom loads are being used correctly in the matcher.
 """
 import itertools
 import random
+from unittest.mock import patch
+
 import pytest
 import logging
 from numpy import testing as nptest

@@ -177,6 +177,9 @@ def openreview_context():
             "SUPERUSER_LASTNAME": "User",
             "SUPERUSER_TILDE_ID": "~Super_User1",
             "SUPERUSER_EMAIL": "info@openreview.net",
+            "REDIS_ADDR": "localhost",
+            "REDIS_PORT": 6379,
+            "REDIS_DB": 10,
         }
     )
 
@@ -218,7 +221,7 @@ def celery_includes():
 @pytest.fixture(scope="session")
 def celery_worker_parameters():
     return {
-        "queues": ("default", "matching", "deployment", "failure"),
+        "queues": ("default", "matching", "deployment", "failure", "startup"),
         "perform_ping_check": False,
         "concurrency": 4,
     }

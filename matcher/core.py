@@ -31,6 +31,7 @@ class MatcherStatus(Enum):
     DEPLOYED = "Deployed"
     DEPLOYMENT_ERROR = "Deployment Error"
     QUEUED = "Queued"
+    CANCELLED = "Cancelled"
 
 
 class MatcherError(Exception):
@@ -73,6 +74,7 @@ class KeywordDatasource:
         self.assignments_output = assignments_output
         self.alternates_output = alternates_output
         self.logger = logger
+        self.match_group = None
 
     def set_assignments(self, assignments):
         self.logger.info("Writing assignments to file")
@@ -90,6 +92,9 @@ class KeywordDatasource:
                 status.value, message, additional_status_info
             )
         )
+
+    def validate_group(self, group_id):
+        pass
 
 
 class Matcher:
@@ -144,6 +149,9 @@ class Matcher:
         The config note's status field will be set to reflect completion or errors.
         """
         try:
+            self.logger.info("Validating Match Group")
+            self.datasource.validate_group(self.datasource.match_group)
+
             self.set_status(MatcherStatus.RUNNING)
 
             self.logger.debug("Start encoding")

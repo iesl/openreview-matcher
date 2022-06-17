@@ -1,6 +1,8 @@
 import re
 import openreview
 import logging
+
+import redis
 from tqdm import tqdm
 from matcher.encoder import EncoderError
 from matcher.core import MatcherError, MatcherStatus
@@ -303,6 +305,12 @@ class ConfigNoteInterface:
 
     def set_status(self, status, message="", additional_status_info={}):
         """Set the status of the config note"""
+        from matcher.service.server import redis_pool
+
+        redis_conn = redis.Redis(connection_pool=redis_pool)
+        redis_conn.hset(
+            name="config_notes", key=self.config_note.id, value=status.value
+        )
         self.config_note.content["status"] = status.value
         self.config_note.content["error_message"] = message
         for key, value in additional_status_info.items():
@@ -315,6 +323,7 @@ class ConfigNoteInterface:
                 self.config_note.id, self.config_note.content["status"]
             )
         )
+        redis_conn.close()
 
     def set_assignments(self, assignments_by_forum):
         """Helper function for posting assignments returned by the Encoder"""

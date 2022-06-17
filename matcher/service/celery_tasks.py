@@ -1,5 +1,7 @@
 import logging
 
+import redis
+from openreview import openreview
 from requests.exceptions import ConnectionError
 from urllib3.exceptions import ConnectTimeoutError, RequestError
 
@@ -105,3 +107,38 @@ def run_deployment(
         raise self.retry(
             exc=exc, countdown=300 * (self.request.retries + 1), max_retries=1
         )
+
+
+@celery.task(name="cancel_stale_notes", track_started=True, bind=True)
+def cancel_stale_notes(
+    self, openreview_baseurl, openreview_username, openreview_password
+):
+    print("Cancelling Stale Notes")
+    from matcher.service.server import redis_pool
+
+    redis_conn = redis.Redis(connection_pool=redis_pool)
+    config_notes = redis_conn.hgetall(name="config_notes")
+    openreview_client = openreview.Client(
+        baseurl=openreview_baseurl,
+        username=openreview_username,
+        password=openreview_password,
+    )
+    for note_id, status in config_notes.items():
+        if status in ["Running", "Deploying", "Queued"]:
+            config_note = openreview_client.get_note(note_id)
+            redis_conn.hset(
+                name="config_notes",
+                key=note_id,
+                value=MatcherStatus.CANCELLED.value,
+            )
+            config_note.content["status"] = MatcherStatus.CANCELLED.value
+            config_note.content[
+                "error_message"
+            ] = "Matching run was cancelled, please try again or contact support."
+            openreview_client.post_note(config_note)
+            print(
+                "Config Note {} status set to: {}".format(
+                    config_note.id, config_note.content["status"]
+                )
+            )
+    redis_conn.close()

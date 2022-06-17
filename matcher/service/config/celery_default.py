@@ -10,6 +10,11 @@ task_queues = (
     Queue(
         "failure", routing_key="matcher.service.celery_tasks.set_error_status"
     ),
+    Queue(
+        "startup",
+        routing_key="matcher.service.celery_tasks.cancel_stale_notes",
+    ),
+    Queue("default"),
 )
 task_ignore_result = False
 broker_url = "redis://localhost:6379/10"

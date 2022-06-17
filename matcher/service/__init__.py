@@ -3,8 +3,7 @@ import logging.handlers
 import os
 
 import flask
-
-
+import redis
 from celery import Celery
 
 os.environ.setdefault(
@@ -80,10 +79,22 @@ def create_celery(app):
     Initializes a celery application using Flask App
     """
 
-    celery = Celery(
-        app.import_name,
-        include=["matcher.service.celery_tasks"],
-    )
+    celery = Celery(app.import_name, include=["matcher.service.celery_tasks"])
     celery.config_from_envvar("CELERY_CONFIG_MODULE")
+    celery.conf.update(app.config)
 
     return celery
+
+
+def create_redis(app):
+    """
+    Initializes a redis connection pool
+    """
+    config_pool = redis.ConnectionPool(
+        host=app.config["REDIS_ADDR"],
+        port=app.config["REDIS_PORT"],
+        db=app.config["REDIS_DB"],
+        decode_responses=True,
+    )
+
+    return config_pool
