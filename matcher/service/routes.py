@@ -9,6 +9,7 @@ from flask_cors import CORS
 
 from .openreview_interface import ConfigNoteInterface
 from ..core import MatcherStatus
+from ..core import Matcher
 
 BLUEPRINT = flask.Blueprint("match", __name__)
 CORS(BLUEPRINT, supports_credentials=True)
@@ -25,7 +26,6 @@ def test():
     """Test endpoint."""
     flask.current_app.logger.info("In test")
     return "OpenReview Matcher (random assignments)"
-
 
 @BLUEPRINT.route("/match", methods=["POST"])
 def match():
@@ -209,6 +209,89 @@ def deploy():
                 config_note_id
             )
         )
+
+    except openreview.OpenReviewException as exception:
+        flask.current_app.logger.error(str(exception))
+
+        error = exception.args[0]
+
+        if isinstance(error, dict):
+            status = error.get("status", 500)
+            result = error
+        else:
+            status = 500
+
+            if "not found" in error.lower():
+                status = 404
+                result["name"] = "NotFoundError"
+            elif "forbidden" in error.lower():
+                status = 403
+                result["name"] = "ForbiddenError"
+
+            result["message"] = error
+        return flask.jsonify(result), status
+
+    except MatcherStatusException as error_handle:
+        flask.current_app.logger.error(str(error_handle))
+        result["error"] = str(error_handle)
+        return flask.jsonify(result), 400
+
+    # For now, it seems like we need this broad Exception. How can we get rid of it?
+    # pylint:disable=broad-except
+    except Exception as error_handle:
+        result["error"] = "Internal server error: {}".format(error_handle)
+        return flask.jsonify(result), 500
+
+    else:
+        flask.current_app.logger.debug("POST returns " + str(result))
+        return flask.jsonify(result), 200
+
+@BLUEPRINT.route("/match/sync", methods=["POST"])
+def match_sync():
+    """Main entry point into the app. Initiates a match run"""
+
+    flask.current_app.logger.debug("Match request received")
+    result = {}
+    token = flask.request.headers.get("Authorization")
+    if not token:
+        flask.current_app.logger.error("No Authorization token in headers")
+        result["error"] = "No Authorization token in headers"
+        return flask.jsonify(result), 400
+    try:
+        config_note_id = flask.request.json["configNoteId"]
+
+        flask.current_app.logger.debug(
+            "Request to assign reviewers for configId: {}".format(
+                config_note_id
+            )
+        )
+
+        openreview_client = openreview.Client(
+            token=token, baseurl=flask.current_app.config["OPENREVIEW_BASEURL"]
+        )
+
+        interface = ConfigNoteInterface(
+            client=openreview_client,
+            config_note_id=config_note_id,
+            logger=flask.current_app.logger,
+        )
+
+        interface.validate_group(interface.match_group)
+        openreview_client.impersonate(interface.venue_id)
+
+        solver_class = interface.config_note.content.get("solver", "MinMax")
+
+        flask.current_app.logger.debug(
+            "Solver class {} selected for configuration id {}".format(
+                solver_class, config_note_id
+            )
+        )
+
+        interface.set_status(MatcherStatus.QUEUED)
+
+        matcher = Matcher(datasource=interface, solver_class=solver_class, logger=flask.current_app.logger)
+        matcher.run()
+        result = matcher.get_status()
 
     except openreview.OpenReviewException as exception:
         flask.current_app.logger.error(str(exception))
