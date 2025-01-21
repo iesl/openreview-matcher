@@ -586,7 +586,7 @@ class ConfigNoteInterfaceV1(BaseConfigNoteInterface):
             self.config_note.content.get("perturbedmaximization_perturbation", 0.0)
         )
         self.bad_match_thresholds = self.config_note.content.get(
-            "perturbedmaximization_bad_match_thresholds", [0.1, 0.3, 0.5]
+            "perturbedmaximization_bad_match_thresholds", [0.1, 0.5, 1.0]
         )
 
         # Lazy variables
@@ -789,7 +789,7 @@ class ConfigNoteInterfaceV2(BaseConfigNoteInterface):
             self.config_note.content.get("perturbedmaximization_perturbation", 0.0)
         )
         self.bad_match_thresholds = self.config_note.content.get(
-            "perturbedmaximization_bad_match_thresholds", [0.1, 0.3, 0.5]
+            "perturbedmaximization_bad_match_thresholds", [0.1, 0.5, 1.0]
         )
 
         # Lazy variables

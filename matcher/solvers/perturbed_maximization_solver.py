@@ -91,7 +91,7 @@ class PerturbedMaximizationSolver:
         assignment = [[0.0 for j in range(self.num_revs)] for i in range(self.num_paps)]
         for i in range(self.num_paps):
             for j in range(self.num_revs):
-                if self.constraint_matrix[i][j] == -1:
+                if self.constraint_matrix[i][j] == -1 or self.cost_matrix[i][j] > 0:
                     x = solver.addVar(lb=0, ub=0, name=f"{i} {j}")
                 elif self.constraint_matrix[i][j] == 1:
                     x = solver.addVar(lb=1, ub=1, name=f"{i} {j}")
@@ -149,7 +149,7 @@ class PerturbedMaximizationSolver:
             ]
             for i in range(self.num_paps):
                 for j in range(self.num_revs):
-                    if self.constraint_matrix[i][j] == -1:
+                    if self.constraint_matrix[i][j] == -1 or self.cost_matrix[i][j] > 0:
                         x = solver.addVar(lb=0, ub=0, name=f"{i} {j}")
                     elif self.constraint_matrix[i][j] == 1:
                         x = solver.addVar(lb=1, ub=1, name=f"{i} {j}")
@@ -306,10 +306,10 @@ class PerturbedMaximizationSolver:
             )
 
         # Perturbation
-        if not isinstance(self.perturbation, float):
+        if not isinstance(self.perturbation, (float, int)):
             self.logger.debug("[PerturbedMaximization]: ERROR: Invaild input")
             raise SolverException(
-                "Perturbation must be of type float"
+                "Perturbation must be a number"
             )
         if not self.perturbation >= 0:
             self.logger.debug("[PerturbedMaximization]: ERROR: Invaild input")
@@ -324,10 +324,10 @@ class PerturbedMaximizationSolver:
                 "Bad match thresholds must be of type list"
             )
         for threshold in self.bad_match_thresholds:
-            if not isinstance(threshold, float):
+            if not isinstance(threshold, (float, int)):
                 self.logger.debug("[PerturbedMaximization]: ERROR: Invaild input")
                 raise SolverException(
-                    "Bad match thresholds must be a list of floats"
+                    "Bad match thresholds must be a list of numbers"
                 )
 
         # OR Validation
@@ -446,7 +446,7 @@ class PerturbedMaximizationSolver:
         assignment = [[0.0 for j in range(self.num_revs)] for i in range(self.num_paps)]
         for i in range(self.num_paps):
             for j in range(self.num_revs):
-                if self.constraint_matrix[i][j] == -1:
+                if self.constraint_matrix[i][j] == -1 or self.cost_matrix[i][j] > 0:
                     x = solver.addVar(lb=0, ub=0, name=f"{i} {j}")
                 elif self.constraint_matrix[i][j] == 1:
                     x = solver.addVar(lb=1, ub=1, name=f"{i} {j}")

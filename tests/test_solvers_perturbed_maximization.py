@@ -233,6 +233,15 @@ def test_impossible_constraints():
     solver.solve()
     assert not solver.solved  # not if minimum is 1
 
+    try:
+        solver = PerturbedMaximizationSolver(
+            [0, 0, 0, 0], [3, 3, 3, 3], [2, 2, 2], encoder(S, M, Q, 0.0)
+        )
+        solver.solve()
+        assert False  # should throw, no positive cost pairs
+    except SolverException:
+        pass
+
 
 def test_fractional_reviewer_load():
     """Test that sampling works correctly if some reviewer loads are fractional"""

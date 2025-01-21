@@ -96,8 +96,8 @@ parser.add_argument(
         One or more floating numbers representing the thresholds in affinity score
         for categorizing a paper-reviewer match. The Perturbed Maximization Solver 
         uses these thresholds, and tries to randomize the assignment within the
-        threshold range. E.g., 0.1, 0.3, 0.5 means that the solver will try to 
-        randomize within [0, 0.1), [0.1, 0.3), [0.3, 0.5), [0.5, 1.0] score ranges.
+        threshold range. E.g., 0.1, 0.5, 1.0 means that the solver will try to 
+        randomize within [0, 0.1), [0.1, 0.5), [0.5, 1.0), [1.0, +inf) score ranges.
         """,
 )
 
